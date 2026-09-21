@@ -173,7 +173,7 @@ def main() -> int:
     git("fetch", args.remote, dry=dry, env=env_proxy, check=False)
     _, head = git("rev-parse", "HEAD", check=False)
     _, origin = git("rev-parse", f"{args.remote}/main", check=False)
-    _, lsremote = git("ls-remote", args.remote, "main", check=False)
+    _, lsremote = git("ls-remote", args.remote, "main", check=False, env=env_proxy)
     head, origin = head.strip(), origin.strip()
     lsremote_sha = lsremote.strip().split()[0] if lsremote.strip() else "(空)"
     print(f"  HEAD          : {head[:12]}")
