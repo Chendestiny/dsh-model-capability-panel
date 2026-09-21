@@ -12,27 +12,38 @@ models can be configured without hand-editing `settings.yaml`.
 
 ### What it does
 
-Settings → **Model capabilities** (`模型能力`): one row per model — `route / model-id` on the left, a
-checkbox strip on the right:
+Settings → **Model capabilities** (`模型能力`): one row per model — `route / model-id` on the left, the
+toggles on the right:
 
 | Toggle | Writes |
 |---|---|
 | Image input | `models[].input = ["text","image"]` (unchecked: deletes `input`) |
-| Reasoning effort | `models[].compat.supportsReasoningEffort = true\|false` |
-| Temperature | `models[].compat.supportsTemperature` |
-| Strict tools | `models[].compat.supportsStrictTools` |
-| Strict mode | `models[].compat.supportsStrictMode` |
-| Cache control on tools | `models[].compat.supportsCacheControlOnTools` |
-| Store | `models[].compat.supportsStore` |
-| Developer role | `models[].compat.supportsDeveloperRole` |
-| Adaptive thinking | `models[].compat.forceAdaptiveThinking` |
+| Strict JSON | `models[].compat.supportsStrictMode` — or `compat.supportsStrictTools` on `anthropic-messages` |
 
-Unchecking a compat switch writes an explicit `false` (not a deleted key) — most of these default to
-`true`, so deleting the key would silently flip the checkbox back on.
+Any *other* `compat` key a model already sets is still rendered as its own toggle under its raw key
+name, so nothing written in `settings.yaml` becomes invisible or un-undoable.
 
-Effective value = `model.compat[key] ?? route.compat[key] ?? false`. When the value comes from the route
-default instead of the model entry, the row shows a faint **default** badge; clicking either way writes an
-explicit model-level override.
+Unchecking a compat switch writes an explicit `false` (not a deleted key) — deleting the key would fall
+back to whatever default the route or the upstream adapter applies, which is not what "off" means.
+
+Effective value = `model.compat[key] ?? route.compat[key] ?? (adapter default, not visible here)`. When
+the value comes from the route default instead of the model entry, the row shows a faint **default**
+badge; clicking either way writes an explicit model-level override.
+
+#### Why only these two toggles
+
+`compat` switches are **protocol-scoped**: a key that is valid on one wire protocol is rejected on
+another, and dsh refuses such a write outright:
+
+```
+llm-pi-ai: provider "..." model "..." sets compat "supportsReasoningEffort", but its api is
+"anthropic-messages", which does not take it; that switch exists on openai-completions, and
+"anthropic-messages" offers supportsEagerToolInputStreaming, supportsLongCacheRetention, ...
+```
+
+Only `supportsStrictMode` / `supportsStrictTools` exist on every protocol this plugin targets, so
+everything else was dropped rather than offered as a switch that a given route cannot accept. The full
+protocol→field table lives in `docs/specs/` for hand-editing `settings.yaml` when you actually need one.
 
 `contextWindow` / `maxTokens` / `name` are deliberately **not** duplicated here — the built-in
 Settings → Models form already edits them.

@@ -48,15 +48,53 @@ discussion #5702 提出需求但未实现）。因此中转/自建 provider 的�
 
 点击任何状态都会把该 key 写成模型级显式值（`true`/`false`），徽标随之消失。
 
-## 暴露的 8 个 compat 开关
+## 暴露的开关（v0.3 定稿：2 个）
 
-`supportsReasoningEffort`、`supportsTemperature`、`supportsStrictTools`、`supportsStrictMode`、
-`supportsCacheControlOnTools`、`supportsStore`、`supportsDeveloperRole`、`forceAdaptiveThinking`
+1. **图片输入**（所有协议的模型）
+2. **严格 JSON** —— 跨协议同一标签，底层按该路由 `api` 写不同键：
+   - `openai-completions` / `openai-responses` / `openai-codex-responses` / `azure-openai-responses` / `bedrock-converse-stream` → `compat.supportsStrictMode`
+   - `anthropic-messages` → `compat.supportsStrictTools`
+   - 该 api 不在上表 → 不渲染该开关
 
-其余 8 个（`supportsUsageInStreaming`、`requiresToolResultName`、
-`requiresAssistantAfterToolResult`、`requiresThinkingAsText`、
-`requiresReasoningContentOnAssistantMessages`、`supportsLongCacheRetention`、
-`supportsEagerToolInputStreaming`、`allowEmptySignature`）留待后续"更多"折叠区，本轮不做。
+另有兜底：某模型若已设了**其他** `compat` 键（历史残留或手写），仍以原始键名为标题渲染成开关，
+保证写成的东西界面上一定可见、可撤销。
+
+### 为什么从 8 个砍到 2 个（v0.2 → v0.3）
+
+初版按"常用程度"选了 8 个 compat 开关，但漏掉了一个硬事实：**compat 是按协议分家的**。
+宿主校验会直接拒绝协议不认的键，用户在 `anthropic-messages` 路由上点「思考档位」即报错：
+
+```
+llm-pi-ai: provider "aicodemirror-claude" model "claude-opus-5" sets compat "supportsReasoningEffort",
+but its api is "anthropic-messages", which does not take it; that switch exists on openai-completions,
+and "anthropic-messages" offers supportsEagerToolInputStreaming, supportsLongCacheRetention,
+supportsCacheControlOnTools, supportsTemperature, forceAdaptiveThinking, allowEmptySignature,
+supportsStrictTools
+```
+
+即 8 个里只有 1 个在任一给定协议上有效，其中 4 个（温度、严格工具、工具缓存控制、自适应思考）
+只在 anthropic 上存在，2 个（思考档位、Store）只在 openai 系存在，2 个（严格模式、Developer 角色）
+在 completions + responses 上存在。用户评估后认为其余开关属于"中转不兼容补救"或"省钱"类，
+在其包月订阅主力线路上无用，最终只保留跨协议唯一的「严格 JSON」。
+
+### 协议 → compat 字段全表（自 `dsh-llm-pi-ai` 的 `COMPAT_GATES`，仅供手改 yaml 参考）
+
+| 协议 | offer（可写） |
+|---|---|
+| `openai-completions` | supportsStore、supportsDeveloperRole、supportsReasoningEffort、supportsUsageInStreaming、maxTokensField、requiresToolResultName、requiresAssistantAfterToolResult、requiresThinkingAsText、requiresReasoningContentOnAssistantMessages、thinkingFormat、chatTemplateKwargs、supportsStrictMode、cacheControlFormat、supportsLongCacheRetention |
+| `openai-responses` / `azure-openai-responses` / `openai-codex-responses` | supportsDeveloperRole、supportsStrictMode、supportsLongCacheRetention |
+| `anthropic-messages` | supportsEagerToolInputStreaming、supportsLongCacheRetention、supportsCacheControlOnTools、supportsTemperature、forceAdaptiveThinking、allowEmptySignature、supportsStrictTools |
+| `bedrock-converse-stream` | supportsStrictMode |
+| 其他 | 无 compat |
+
+（`maxTokensField` / `thinkingFormat` / `cacheControlFormat` 为字符串型、`chatTemplateKwargs` 为对象型，
+不适合做勾选框，故不纳入面板。）
+
+### 未做的事（YAGNI）
+
+- `contextWindow` / `maxTokens`：dsh 内置「设置 → 模型」已有，不重复实现
+- `reasoningEfforts` 档位编辑：用户已手配，插件只保证不碰
+- 供应商（route）级 `compat` 默认值、`headers`、`transport`、超时、图片上限：留待"供应商能力"下一版
 
 ## 写入机制
 
