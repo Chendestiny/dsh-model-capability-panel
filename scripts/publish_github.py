@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""publish_github.py — 把 D:\\Project\\dsh-model-modality-panel 提交并推送到 GitHub。
+"""publish_github.py — 把 D:\\Project\\dsh-model-capability-panel 提交并推送到 GitHub。
 
 用法：
     python scripts/publish_github.py                          # 用默认提交信息
@@ -31,7 +31,7 @@ for _stream in (sys.stdout, sys.stderr):
 
 AUTHOR_NAME = "Chendestiny"
 AUTHOR_EMAIL = "42106833+Chendestiny@users.noreply.github.com"
-DEFAULT_REPO = "https://github.com/Chendestiny/dsh-model-modality-panel.git"
+DEFAULT_REPO = "https://github.com/Chendestiny/dsh-model-capability-panel.git"
 DEFAULT_MESSAGE = "chore: sync local source"
 REPO_DIR = Path(__file__).resolve().parent.parent
 

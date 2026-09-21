@@ -29,7 +29,7 @@ for _stream in (sys.stdout, sys.stderr):
     except (AttributeError, ValueError):
         pass
 
-PKG_NAME = "dsh-model-modality-panel"
+PKG_NAME = "dsh-model-capability-panel"
 REPO_DIR = Path(__file__).resolve().parent.parent
 
 

@@ -1,6 +1,8 @@
-# dsh-model-modality-panel
+# dsh-model-capability-panel
 
-A DeepSeek Harness (`dsh`) settings panel that toggles each model's **image input modality** with one checkbox per model, so relay and custom-provider models can be marked vision-capable without hand-editing `settings.yaml`.
+A DeepSeek Harness (`dsh`) settings panel for **per-model capability overrides**: one row per model with a
+checkbox strip for image input modality plus the compat protocol switches, so relay and custom-provider
+models can be configured without hand-editing `settings.yaml`.
 
 [中文说明](#中文) · [English](#english)
 
@@ -8,7 +10,34 @@ A DeepSeek Harness (`dsh`) settings panel that toggles each model's **image inpu
 
 ## English
 
-### Why this exists
+### What it does
+
+Settings → **Model capabilities** (`模型能力`): one row per model — `route / model-id` on the left, a
+checkbox strip on the right:
+
+| Toggle | Writes |
+|---|---|
+| Image input | `models[].input = ["text","image"]` (unchecked: deletes `input`) |
+| Reasoning effort | `models[].compat.supportsReasoningEffort = true\|false` |
+| Temperature | `models[].compat.supportsTemperature` |
+| Strict tools | `models[].compat.supportsStrictTools` |
+| Strict mode | `models[].compat.supportsStrictMode` |
+| Cache control on tools | `models[].compat.supportsCacheControlOnTools` |
+| Store | `models[].compat.supportsStore` |
+| Developer role | `models[].compat.supportsDeveloperRole` |
+| Adaptive thinking | `models[].compat.forceAdaptiveThinking` |
+
+Unchecking a compat switch writes an explicit `false` (not a deleted key) — most of these default to
+`true`, so deleting the key would silently flip the checkbox back on.
+
+Effective value = `model.compat[key] ?? route.compat[key] ?? false`. When the value comes from the route
+default instead of the model entry, the row shows a faint **default** badge; clicking either way writes an
+explicit model-level override.
+
+`contextWindow` / `maxTokens` / `name` are deliberately **not** duplicated here — the built-in
+Settings → Models form already edits them.
+
+For the `llm-deepseek` family only the image toggle applies (that schema has no `compat`).
 
 The dsh runtime already resolves and enforces a per-model input modality
 (`declaredInput(entry.input) ?? base?.input ?? DEFAULT_INPUT`, with

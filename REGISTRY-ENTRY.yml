@@ -1,9 +1,0 @@
-# 投稿到 awesome-dsh-plugin 注册表的条目文件（dsh-market 的插件列表来源）
-# 放到 registry 仓库的 data/plugins/Chendestiny__dsh-model-modality-panel.yml
-# 注意：描述里含 ": "（冒号+空格）必须加引号，否则 YAML 会解析成嵌套键、CI 直接拒。
-url: https://github.com/Chendestiny/dsh-model-modality-panel
-name: Chendestiny/dsh-model-modality-panel
-category: model
-description:
-  en: "DeepSeek Harness settings panel that toggles each model's image input modality: one checkbox per model writes llm-pi-ai providers[].models[].input (or llm-deepseek models[].inputModalities), so relay and custom-provider models can be marked vision-capable without hand-editing settings.yaml."
-  zh: "DeepSeek Harness 设置面板插件：在「设置 → 模型读图」里为每个模型勾选图片输入模态，写入 llm-pi-ai 的 providers.<路由>.models[].input，或 llm-deepseek 的 models[].inputModalities；中转与自定义 provider 的模型无需手改 settings.yaml 即可标记读图。"

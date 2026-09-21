@@ -1,7 +1,7 @@
 {
-  "name": "dsh-model-modality-panel",
-  "version": "0.1.0",
-  "description": "DeepSeek Harness settings panel that toggles each model's image input modality: one checkbox per model writes llm-pi-ai models[].input (or llm-deepseek models[].inputModalities), so relay and custom-provider models can be marked vision-capable without hand-editing settings.yaml.",
+  "name": "dsh-model-capability-panel",
+  "version": "0.2.0",
+  "description": "DeepSeek Harness settings panel for per-model capability overrides: image input modality plus the compat protocol switches (reasoning effort, temperature, strict tools, cache control and more), written to llm-pi-ai models[].input / models[].compat without hand-editing settings.yaml.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -31,11 +31,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Chendestiny/dsh-model-modality-panel.git"
+    "url": "git+https://github.com/Chendestiny/dsh-model-capability-panel.git"
   },
-  "homepage": "https://github.com/Chendestiny/dsh-model-modality-panel#readme",
+  "homepage": "https://github.com/Chendestiny/dsh-model-capability-panel#readme",
   "bugs": {
-    "url": "https://github.com/Chendestiny/dsh-model-modality-panel/issues"
+    "url": "https://github.com/Chendestiny/dsh-model-capability-panel/issues"
   },
   "engines": {
     "node": ">=20"

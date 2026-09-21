@@ -1,0 +1,9 @@
+# 投稿到 awesome-dsh-plugin 注册表的条目文件（dsh-market 的插件列表来源）
+# 直接拷贝到 registry 仓库：data/plugins/Chendestiny__dsh-model-capability-panel.yml
+# 注意：描述里含 ": "（冒号+空格）必须加引号，否则 YAML 会解析成嵌套键、CI 直接拒。
+url: https://github.com/Chendestiny/dsh-model-capability-panel
+name: Chendestiny/dsh-model-capability-panel
+category: model
+description:
+  en: "DeepSeek Harness settings panel for per-model capability overrides: one checkbox per model for image input modality plus the compat protocol switches (reasoning effort, temperature, strict tools, strict mode, cache control, store, developer role, adaptive thinking), writing llm-pi-ai models[].input and models[].compat without hand-editing settings.yaml."
+  zh: "DeepSeek Harness 模型能力面板：每个模型一行，勾选图片输入模态与常用 compat 协议开关（思考档位、温度、严格工具、严格模式、缓存控制、Store、Developer 角色、自适应思考），写入 llm-pi-ai 的 models[].input 与 models[].compat，中转与自定义 provider 的模型无需手改 settings.yaml。"
