@@ -1,0 +1,59 @@
+{
+  "name": "dsh-model-modality-panel",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness settings panel that toggles each model's image input modality: one checkbox per model writes llm-pi-ai models[].input (or llm-deepseek models[].inputModalities), so relay and custom-provider models can be marked vision-capable without hand-editing settings.yaml.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "vision",
+    "multimodal",
+    "settings"
+  ],
+  "author": "Chendestiny",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Chendestiny/dsh-model-modality-panel.git"
+  },
+  "homepage": "https://github.com/Chendestiny/dsh-model-modality-panel#readme",
+  "bugs": {
+    "url": "https://github.com/Chendestiny/dsh-model-modality-panel/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-api-remotes"
+      ],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1"
+  }
+}

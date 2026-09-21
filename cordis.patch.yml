@@ -1,0 +1,7 @@
+# dsh-model-modality-panel bundle patch: mounts the plugin row into the profile
+# composition. The row name resolves through the profile directory's
+# node_modules (the bundle is installed there by
+# `dsh plugin --profile <name> add <dir>`).
+- insert:
+    - id: model-modality-panel
+      name: 'dsh-model-modality-panel'
