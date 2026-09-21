@@ -53,9 +53,17 @@ discussion #5702 提出需求但未实现）。因此中转/自建 provider 的�
 1. **输入** —— 图片勾选（`models[].input`）。**这是唯一可选的第二模态**：`llm-pi-ai` 的 `MODALITIES`
    与 `llm-deepseek` 的 `MODEL_MODALITIES` 都只有 `["text", "image"]`；音频/视频/PDF 只存在于内置
    目录的模型元数据里，不是可配置字段。用户要的"input 更多选项"在 DSH 层面不存在，已如实说明。
-2. **推理档位** —— 7 个档位（`THINKING_LEVELS = off, minimal, low, medium, high, xhigh, max`）的勾选，
-   写入 `models[].reasoningEfforts`。默认平铺 `off/low/medium/high`，`minimal/xhigh/max` 收在
-   「更多档位」展开区；**若模型已设了后三者之一则自动展开**（否则已设值不可见、撤不掉）。
+2. **推理档位** —— 每模型一个**三态总开关**（这是用户的核心诉求：很多第三方模型根本没有档位可选）：
+
+| 状态 | 判定 | 界面 | 操作 → 写入 |
+|---|---|---|---|
+| **未声明** | 条目里没有 `reasoningEfforts` | 标「未声明（默认：由内置目录决定）」+「默认」徽标 | 打开开关 → 写四档默认 `{off: null, low: "low", medium: "medium", high: "high"}` |
+| **已启用** | `reasoningEfforts` 是 dict | 标「已启用」，开关 ON，档位勾选反映现有键 | 勾/取消档位 → 写新 dict；全部取消 → `false`；「恢复默认」→ **删键** |
+| **已禁用** | `reasoningEfforts === false` | 标「已禁用（该模型不提供档位）」 | 打开开关 → 原样恢复记忆的 dict，无记忆则四档默认 |
+
+档位共 7 个（`THINKING_LEVELS = off, minimal, low, medium, high, xhigh, max`）：默认平铺
+`off/low/medium/high`，`minimal/xhigh/max` 收在「更多档位」展开区；**若模型已设了后三者之一则自动展开**
+（否则已设值不可见、撤不掉）。
 
 ### reasoningEfforts 写入语义
 
@@ -64,8 +72,13 @@ discussion #5702 提出需求但未实现）。因此中转/自建 provider 的�
 | 勾选档位 | 该键存在，值 = 等级名（字符串）；`off` 例外 → 写 `null`（YAML 里的 `off:`） |
 | 取消档位 | 删除该键 |
 | 全部取消 | `reasoningEfforts: false`（该模型不提供档位选择），而非空字典 |
-| 已有的自定义线上拼写 | **原样保留**（如 `high: "weird-wire"` 不动），只有新勾选的档位才写等级名 |
+| 已有的自定义线上拼写 | **任何路径都不重写**（`orderLevels()` 是唯一的 dict 重建入口） |
+| 关闭总开关 → 再打开 | 恢复**整份 dict**（含各档位拼写），不是只恢复档位名 |
+| 「恢复默认」 | 删除 `reasoningEfforts` 键 → 回到「未声明」 |
 | 键顺序 | off, minimal, low, medium, high, xhigh, max |
+
+**已知限制**：关闭总开关时原 dict 只保留在**内存**（`lastEnabledDicts`，页面会话级）。写入 `false` 本身就
+意味着文件里不再有那些拼写，所以刷新页面后重新打开只能拿四档默认——关闭时的反馈文案会明说这一点。
 
 ### 为什么这个字段才是有价值的
 
