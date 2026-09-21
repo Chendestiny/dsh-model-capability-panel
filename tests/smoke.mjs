@@ -220,9 +220,10 @@ eq(moreIn(tree, 'glm-5.3-flash').props['data-open'], 'false', 'a row without ext
 
 const defaultBadges = nodesWith(tree, (node) => node.children?.[0] === '默认');
 eq(defaultBadges.length, 2, `one default badge per undeclared row (got ${defaultBadges.length})`);
-const hints = nodesWith(tree, (node) => typeof node.children?.[0] === 'string' && node.children[0].startsWith('由内置目录决定')).map((node) => node.children[0]);
-eq(hints.length, 2, 'each undeclared row explains that the catalogue decides');
-ok(hints[0].includes('聊天界面就不提供档位'), 'and says what that means when the catalogue has no reasoning metadata');
+eq(nodesWith(tree, (node) => typeof node.children?.[0] === 'string' && node.children[0].startsWith('由内置目录决定')).length, 0,
+	'the catalogue explanation does not repeat on every card - it lives in the panel intro only');
+eq(nodesWith(tree, (node) => node.children?.[0] === '已禁用').length, 1,
+	'the disabled row carries the short 已禁用 label');
 const disabledHints = nodesWith(tree, (node) => typeof node.children?.[0] === 'string' && node.children[0].includes('已禁用'));
 eq(disabledHints.length, 1, 'the disabled row says the model offers no level choice');
 eq(nodesWith(tree, (node) => node.props?.['data-role'] === 'reasoning-reset').length, 5, 'reset-to-default is offered on every declared row, enabled or disabled');
