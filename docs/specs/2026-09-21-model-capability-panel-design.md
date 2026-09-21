@@ -48,34 +48,48 @@ discussion #5702 提出需求但未实现）。因此中转/自建 provider 的�
 
 点击任何状态都会把该 key 写成模型级显式值（`true`/`false`），徽标随之消失。
 
-## 暴露的开关（v0.3 定稿：2 个）
+## 暴露的开关（v0.4 定稿：2 组）
 
-1. **图片输入**（所有协议的模型）
-2. **严格 JSON** —— 跨协议同一标签，底层按该路由 `api` 写不同键：
-   - `openai-completions` / `openai-responses` / `openai-codex-responses` / `azure-openai-responses` / `bedrock-converse-stream` → `compat.supportsStrictMode`
-   - `anthropic-messages` → `compat.supportsStrictTools`
-   - 该 api 不在上表 → 不渲染该开关
+1. **输入** —— 图片勾选（`models[].input`）。**这是唯一可选的第二模态**：`llm-pi-ai` 的 `MODALITIES`
+   与 `llm-deepseek` 的 `MODEL_MODALITIES` 都只有 `["text", "image"]`；音频/视频/PDF 只存在于内置
+   目录的模型元数据里，不是可配置字段。用户要的"input 更多选项"在 DSH 层面不存在，已如实说明。
+2. **推理档位** —— 7 个档位（`THINKING_LEVELS = off, minimal, low, medium, high, xhigh, max`）的勾选，
+   写入 `models[].reasoningEfforts`。默认平铺 `off/low/medium/high`，`minimal/xhigh/max` 收在
+   「更多档位」展开区；**若模型已设了后三者之一则自动展开**（否则已设值不可见、撤不掉）。
 
-另有兜底：某模型若已设了**其他** `compat` 键（历史残留或手写），仍以原始键名为标题渲染成开关，
-保证写成的东西界面上一定可见、可撤销。
+### reasoningEfforts 写入语义
 
-### 为什么从 8 个砍到 2 个（v0.2 → v0.3）
+| 操作 | 写入 |
+|---|---|
+| 勾选档位 | 该键存在，值 = 等级名（字符串）；`off` 例外 → 写 `null`（YAML 里的 `off:`） |
+| 取消档位 | 删除该键 |
+| 全部取消 | `reasoningEfforts: false`（该模型不提供档位选择），而非空字典 |
+| 已有的自定义线上拼写 | **原样保留**（如 `high: "weird-wire"` 不动），只有新勾选的档位才写等级名 |
+| 键顺序 | off, minimal, low, medium, high, xhigh, max |
 
-初版按"常用程度"选了 8 个 compat 开关，但漏掉了一个硬事实：**compat 是按协议分家的**。
-宿主校验会直接拒绝协议不认的键，用户在 `anthropic-messages` 路由上点「思考档位」即报错：
+### 为什么这个字段才是有价值的
 
-```
-llm-pi-ai: provider "aicodemirror-claude" model "claude-opus-5" sets compat "supportsReasoningEffort",
-but its api is "anthropic-messages", which does not take it; that switch exists on openai-completions,
-and "anthropic-messages" offers supportsEagerToolInputStreaming, supportsLongCacheRetention,
-supportsCacheControlOnTools, supportsTemperature, forceAdaptiveThinking, allowEmptySignature,
-supportsStrictTools
-```
+DSH 在选档位时校验 `reasoningEfforts`：模型没声明的档位会被拒绝
+（`provider "…" model "…" does not support reasoning effort "high"`）。也就是说**聊天界面里能选的思考
+档位，完全由这个字段决定**，而用户此前只声明了 4 个档位，等于放弃了 `minimal/xhigh/max`。
 
-即 8 个里只有 1 个在任一给定协议上有效，其中 4 个（温度、严格工具、工具缓存控制、自适应思考）
-只在 anthropic 上存在，2 个（思考档位、Store）只在 openai 系存在，2 个（严格模式、Developer 角色）
-在 completions + responses 上存在。用户评估后认为其余开关属于"中转不兼容补救"或"省钱"类，
-在其包月订阅主力线路上无用，最终只保留跨协议唯一的「严格 JSON」。
+## v0.2 → v0.3 → v0.4 的取舍记录
+
+- **v0.2**：按"常用程度"铺了 8 个 compat 开关。**设计错误**：compat 是**按协议分家**的，宿主会直接拒绝
+  协议不认的键：
+  ```
+  llm-pi-ai: provider "aicodemirror-claude" model "claude-opus-5" sets compat "supportsReasoningEffort",
+  but its api is "anthropic-messages", which does not take it; that switch exists on openai-completions,
+  and "anthropic-messages" offers supportsEagerToolInputStreaming, supportsLongCacheRetention,
+  supportsCacheControlOnTools, supportsTemperature, forceAdaptiveThinking, allowEmptySignature,
+  supportsStrictTools
+  ```
+  8 个里只有 1 个在任一给定协议上有效：温度/严格工具/工具缓存/自适应思考仅 anthropic，思考档位/Store
+  仅 openai 系，严格模式/Developer 角色在 completions+responses。
+- **v0.3**：砍到「图片 + 严格 JSON」（跨协议唯一的通用键），并补上写入反馈（pending / 成功含真实路径 /
+  失败逐字显示宿主原文）。用户实测后判定严格 JSON 属"感觉不到"的协议参数，价值低。
+- **v0.4**：用户澄清真正想要的是 `input` 的更多选项与推理档位。`input` 无更多选项（见上），故最终
+  收敛为「图片 + 推理档位」，compat 相关代码整体移除。协议的完整字段表保留在本文档供手改 yaml 参考。
 
 ### 协议 → compat 字段全表（自 `dsh-llm-pi-ai` 的 `COMPAT_GATES`，仅供手改 yaml 参考）
 
@@ -93,8 +107,8 @@ supportsStrictTools
 ### 未做的事（YAGNI）
 
 - `contextWindow` / `maxTokens`：dsh 内置「设置 → 模型」已有，不重复实现
-- `reasoningEfforts` 档位编辑：用户已手配，插件只保证不碰
-- 供应商（route）级 `compat` 默认值、`headers`、`transport`、超时、图片上限：留待"供应商能力"下一版
+- 供应商（route）级 `compat` 默认值、`reasoning` 默认档位、`headers`、`transport`、超时、图片上限：
+  留待"供应商能力"下一版
 
 ## 写入机制
 

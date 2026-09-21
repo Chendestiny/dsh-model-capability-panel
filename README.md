@@ -13,40 +13,46 @@ models can be configured without hand-editing `settings.yaml`.
 ### What it does
 
 Settings → **Model capabilities** (`模型能力`): one row per model — `route / model-id` on the left, the
-toggles on the right:
+controls on the right:
 
-| Toggle | Writes |
+| Control | Writes |
 |---|---|
 | Image input | `models[].input = ["text","image"]` (unchecked: deletes `input`) |
-| Strict JSON | `models[].compat.supportsStrictMode` — or `compat.supportsStrictTools` on `anthropic-messages` |
+| Reasoning levels | `models[].reasoningEfforts = { off: null, low: "low", medium: "medium", high: "high", … }` |
 
-Any *other* `compat` key a model already sets is still rendered as its own toggle under its raw key
-name, so nothing written in `settings.yaml` becomes invisible or un-undoable.
+**Reasoning levels** are the levels the model *offers* in the effort picker — dsh refuses an effort the
+model never declared (`provider "…" model "…" does not support reasoning effort "high"`). Seven levels
+exist: `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`. The panel shows `off/low/medium/high`
+inline and folds `minimal/xhigh/max` behind **more levels** (auto-expanded when one of them is already
+set). Unchecking every level writes `reasoningEfforts: false`, meaning "this model offers no effort
+picker". A level already carrying a custom wire spelling keeps that string untouched — only newly checked
+levels are written as the level's own name (`off` is written as `null`, the shape `off:` in YAML).
 
-Unchecking a compat switch writes an explicit `false` (not a deleted key) — deleting the key would fall
-back to whatever default the route or the upstream adapter applies, which is not what "off" means.
+Each write reports back: a pending state on the row, then the exact path it wrote
+(`llm-pi-ai.providers.<route>.models[i].reasoningEfforts = {off, low, medium, high}`), or the host's
+rejection message verbatim.
 
-Effective value = `model.compat[key] ?? route.compat[key] ?? (adapter default, not visible here)`. When
-the value comes from the route default instead of the model entry, the row shows a faint **default**
-badge; clicking either way writes an explicit model-level override.
+#### What is deliberately not here
 
-#### Why only these two toggles
+- **Other input modalities don't exist.** Both `llm-pi-ai` and `llm-deepseek` declare exactly
+  `["text", "image"]`; audio/video/pdf appear only as *catalog metadata* about a model, never as a
+  configurable field. `image` is the only second modality a model entry can declare.
+- **`compat` protocol switches were removed.** They are protocol-scoped — a key valid on
+  `openai-completions` is rejected outright on `anthropic-messages`:
 
-`compat` switches are **protocol-scoped**: a key that is valid on one wire protocol is rejected on
-another, and dsh refuses such a write outright:
+  ```
+  llm-pi-ai: provider "…" model "…" sets compat "supportsReasoningEffort", but its api is
+  "anthropic-messages", which does not take it; that switch exists on openai-completions, and
+  "anthropic-messages" offers supportsEagerToolInputStreaming, supportsLongCacheRetention, …
+  ```
 
-```
-llm-pi-ai: provider "..." model "..." sets compat "supportsReasoningEffort", but its api is
-"anthropic-messages", which does not take it; that switch exists on openai-completions, and
-"anthropic-messages" offers supportsEagerToolInputStreaming, supportsLongCacheRetention, ...
-```
+  The complete protocol→field table is kept in `docs/specs/` for the times you do need one — hand-edit
+  `settings.yaml` and the host will tell you immediately if the route's protocol cannot take it.
+- **`contextWindow` / `maxTokens` / `name`** — the built-in Settings → Models form already edits them.
+- **`reasoning`** (route-level default level) and route-level `compat` — a later "provider capabilities"
+  scope.
 
-Only `supportsStrictMode` / `supportsStrictTools` exist on every protocol this plugin targets, so
-everything else was dropped rather than offered as a switch that a given route cannot accept. The full
-protocol→field table lives in `docs/specs/` for hand-editing `settings.yaml` when you actually need one.
-
-`contextWindow` / `maxTokens` / `name` are deliberately **not** duplicated here — the built-in
-Settings → Models form already edits them.
+For the `llm-deepseek` family only the image toggle applies.
 
 For the `llm-deepseek` family only the image toggle applies (that schema has no `compat`).
 
