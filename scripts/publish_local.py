@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""publish_local.py — 把 D:\\Project\\dsh-model-modality-panel 作为 link 安装进 dsh。
+"""publish_local.py — 把 D:\\Project\\dsh-model-capability-panel 作为 link 安装进 dsh。
 
 本脚本让 D:\\Project 下的源码目录成为 dsh 的插件源：用 `dsh plugin ... add <目录>`
 把 profile 的依赖写成 `link:<目录>`，此后改代码 = 改本地安装（bundle 内容热重载）。
@@ -136,7 +136,7 @@ def main() -> int:
 
     print(
         "\n提醒：客户端插件集合只在启动时装配 —— 请重启 dsh web 并刷新页面，"
-        "设置里才会出现「模型读图」页。"
+        "设置里才会出现「模型能力」页。"
     )
     return 0
 

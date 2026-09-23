@@ -66,11 +66,17 @@ const routeAModels = [
 	 * with it — only the checked levels are remembered, not how they were spelled) */
 	{ id: 'spelling-model', contextWindow: 128000, reasoningEfforts: { high: 'weird-wire', low: 'low' } },
 ];
+
+/** A user-layer route declared *before* routeA: the panel must show it there,
+ * not alphabetically after — that is what makes ↑/↓ readable. */
+const routeZModels = [
+	{ id: 'route-z-model', contextWindow: 200000, reasoningEfforts: { off: null, low: 'low' } },
+];
 const namespaces = [
 	{
 		ns: 'llm-pi-ai',
 		revision: 1,
-		user: { providers: { routeA: { models: routeAModels } } },
+		user: { providers: { routeZ: { models: routeZModels }, routeA: { models: routeAModels } } },
 		value: { providers: {
 			routeA: { api: 'openai-completions', baseURL: 'https://example.test/v1', models: routeAModels },
 			// catalogue-inherited route: no user layer, an empty modality list
@@ -197,7 +203,7 @@ const openMore = (model) => {
 };
 
 // ---- 1. the two capability families, and only those ----------------------
-eq(boxes.filter((candidate) => candidate.props['data-kind'] === 'image').length, 9, 'one image toggle per model over both families');
+eq(boxes.filter((candidate) => candidate.props['data-kind'] === 'image').length, 10, 'one image toggle per model over both families');
 eq(boxes.filter((candidate) => candidate.props['data-kind'] === 'compat').length, 0, 'the compat switches are gone entirely');
 eq(levelsIn(tree, 'deepseek-flash').length, 0, 'the deepseek family gets no level checkboxes (that catalogue schema has no reasoningEfforts)');
 eq(masterOf(tree, 'deepseek-flash'), undefined, 'and no master switch either');
@@ -226,7 +232,7 @@ eq(nodesWith(tree, (node) => node.children?.[0] === '已禁用').length, 1,
 	'the disabled row carries the short 已禁用 label');
 const disabledHints = nodesWith(tree, (node) => typeof node.children?.[0] === 'string' && node.children[0].includes('已禁用'));
 eq(disabledHints.length, 1, 'the disabled row says the model offers no level choice');
-eq(nodesWith(tree, (node) => node.props?.['data-role'] === 'reasoning-reset').length, 5, 'reset-to-default is offered on every declared row, enabled or disabled');
+eq(nodesWith(tree, (node) => node.props?.['data-role'] === 'reasoning-reset').length, 6, 'reset-to-default is offered on every declared row, enabled or disabled');
 ok(resetIn(tree, 'glm-5.3-flash') !== undefined, 'an enabled row can be returned to the catalogue');
 eq(resetIn(tree, 'step-3.7-flash'), undefined, 'an undeclared row has nothing to reset');
 
@@ -357,6 +363,94 @@ await new Promise((resolve) => setTimeout(resolve, 80));
 eq(feedbackByKey(render(shortTtl)).has('llm-pi-ai|routeA|0|feedback'), false, 'and clears itself shortly after');
 eq(feedbackByKey(render(shortTtl)).get('llm-pi-ai|routeA|1|feedback')?.props['data-feedback'], 'error', 'while a refusal stays put until the next write');
 
+// ---- 12. route order = settings.yaml key order, not alphabetical -----------
+const piCardKeys = () => nodesWith(render(), (node) => typeof node.props?.key === 'string'
+	&& node.props.key.startsWith('llm-pi-ai|') && node.props.key.endsWith('|card')).map((node) => node.props.key);
+deep(piCardKeys(), ['llm-pi-ai|routeZ|card', 'llm-pi-ai|routeA|card', 'llm-pi-ai|routeB|card'],
+	'pi-ai cards render in YAML key order (user keys first, value-only after), never alphabetically');
+
+// ---- 13. model ↑/↓ — one slot, whole array, fields travel -----------------
+const moveButton = (route, model, dir) => nodesWith(render(), (node) =>
+	node.props?.['data-role'] === (dir === 'down' ? 'model-move-down' : 'model-move-up')
+	&& node.props['data-route'] === route && node.props['data-model'] === model)[0];
+eq(moveButton('routeA', 'glm-5.3-flash', 'up').props.disabled, true, 'the first model cannot move up');
+eq(moveButton('routeA', 'spelling-model', 'down').props.disabled, true, 'the last model cannot move down');
+eq(moveButton('routeA', 'full-model', 'up').props.disabled, false, 'a model in the middle can move either way');
+await moveButton('routeA', 'full-model', 'up').props.onClick();
+const moveWrite = lastWrite();
+deep(moveWrite.ops[0].path, ['providers', 'routeA', 'models'], 'the move sets the route models array');
+eq(moveWrite.ops[0].value.length, 6, 'the whole array travels, not just the moved entry');
+deep(moveWrite.ops[0].value.map((model) => model.id),
+	['full-model', 'glm-5.3-flash', 'custom-wire-model', 'no-choice-model', 'step-3.7-flash', 'spelling-model'],
+	'the target lands one slot up and everyone else keeps their order');
+eq(moveWrite.ops[0].value[0].reasoningEfforts, false,
+	'the moved entry carries its reasoningEfforts state (disabled) with it');
+deep(moveWrite.ops[0].value[2].reasoningEfforts, { high: 'weird-wire' },
+	'the entry it passed keeps its enabled dict and the hand-written spelling');
+eq(moveWrite.ops[0].value[2].contextWindow, 500000, 'and its hand-written contextWindow');
+eq(lineOf(render(), 'llm-pi-ai|routeA|1|feedback'),
+	'已将 full-model 移至第 1 位（llm-pi-ai.providers.routeA.models）',
+	'the move reports the real model, the new position and the real array path');
+
+// ---- 14. provider ↑/↓ — key order only, values deep-equal -----------------
+const provButton = (route, dir) => nodesWith(render(), (node) =>
+	node.props?.['data-role'] === (dir === 'down' ? 'provider-move-down' : 'provider-move-up')
+	&& node.props['data-route'] === route)[0];
+eq(provButton('routeZ', 'up').props.disabled, true, 'the first user-layer provider cannot move up');
+eq(provButton('routeA', 'down').props.disabled, true, 'the last user-layer provider cannot move down past the value-only tail');
+const piNamespace = () => namespaces.find((candidate) => candidate.ns === 'llm-pi-ai');
+const providersSnapshot = JSON.parse(JSON.stringify(piNamespace().user.providers));
+const revisionBefore = piNamespace().revision;
+const writesBeforeGuard = writes.length;
+await provButton('routeB', 'up').props.onClick();
+eq(writes.length, writesBeforeGuard, 'a value-only route is not in the file: nothing is written');
+eq(lineOf(render(), 'llm-pi-ai|routeB|providers|feedback'), '用户层 providers 缺失，请直接改 settings.yaml 排序',
+	'and the guard says exactly where that route lives instead');
+await provButton('routeA', 'up').props.onClick();
+const provWrite = writes.at(-1);
+eq(provWrite.ns, 'llm-pi-ai', 'the reorder writes the pi-ai namespace');
+deep(provWrite.ops[0].path, ['providers'], 'it sets the whole providers map — key order is the dropdown order');
+eq(provWrite.expectedRevision, revisionBefore, 'with the revision the panel actually read');
+const rebuilt = provWrite.ops[0].value;
+deep(Object.keys(rebuilt), ['routeA', 'routeZ'], 'the route moved one slot up and value-only routes are not materialized into the file');
+eq(Object.keys(rebuilt).length, Object.keys(providersSnapshot).length, 'no provider is lost');
+for (const route of Object.keys(providersSnapshot)) {
+	deep(rebuilt[route], providersSnapshot[route], `value of ${route} is deep-equal to what describe returned`);
+}
+deep(piCardKeys(), ['llm-pi-ai|routeA|card', 'llm-pi-ai|routeZ|card', 'llm-pi-ai|routeB|card'],
+	'the panel immediately displays the order it just wrote');
+eq(lineOf(render(), 'llm-pi-ai|routeA|providers|feedback'), '已将 routeA 移至第 1 位（顺序热重载，无需重启）',
+	'the move reports the route, its new position, and that no restart is needed');
+
+// ---- 15. card folding is view state, sort buttons stay reachable ----------
+const foldButton = (route) => nodesWith(render(), (node) =>
+	node.props?.['data-role'] === 'card-collapse' && node.props['data-route'] === route)[0];
+const rowKeysIn = (route) => nodesWith(render(), (node) => typeof node.props?.key === 'string'
+	&& node.props.key.startsWith(`llm-pi-ai|${route}|`) && node.props.key.endsWith('|row'));
+eq(foldButton('routeA').props['data-collapsed'], 'false', 'cards start expanded');
+ok(rowKeysIn('routeA').length > 0, 'an expanded card shows its model rows');
+foldButton('routeA').props.onClick();
+eq(rowKeysIn('routeA').length, 0, 'folding hides the model rows');
+eq(foldButton('routeA').props['data-collapsed'], 'true', 'the fold button reports the folded state');
+ok(nodesWith(render(), (node) => node.props?.['data-role'] === 'provider-move-up'
+	&& node.props['data-route'] === 'routeA').length === 1,
+	'the sort buttons stay on the header while the card is folded');
+foldButton('routeA').props.onClick();
+ok(rowKeysIn('routeA').length > 0, 'unfolding brings the rows back');
+
+// ---- 16. the deepseek family gets no provider sorting --------------------
+eq(nodesWith(render(), (node) => typeof node.props?.key === 'string'
+	&& node.props.key.startsWith('llm-deepseek|') && node.props.key.endsWith('|card')).length, 1,
+	'the deepseek family renders one card');
+eq(nodesWith(render(), (node) => typeof node.props?.key === 'string'
+	&& node.props.key.startsWith('llm-deepseek|')
+	&& (node.props['data-role'] === 'provider-move-up' || node.props['data-role'] === 'provider-move-down')).length, 0,
+	'and no provider sort buttons: its order is the profile bundle order');
+ok(JSON.stringify(render()).includes('顺序由 profile 加载顺序决定，此处不可调'),
+	'the deepseek group carries the note that explains why');
+eq(nodesWith(render(), (node) => node.props?.['data-role'] === 'model-move-up').length, 10,
+	'every model row still carries its own move buttons (10 models across both families)');
+
 const rendered = JSON.stringify(render());
 ok(rendered.includes('模型能力'), 'renders the panel title');
 ok(rendered.includes('严格 JSON') === false, 'the strict-JSON copy is gone');
@@ -364,4 +458,6 @@ ok(rendered.includes('严格 JSON') === false, 'the strict-JSON copy is gone');
 const images = boxes.filter((candidate) => candidate.props['data-kind'] === 'image').length;
 const masters = boxes.filter((candidate) => candidate.props['data-kind'] === 'reasoning-enabled').length;
 const levels = boxes.filter((candidate) => candidate.props['data-kind'] === 'reasoning-level').length;
-console.log(`smoke: OK — first render ${boxes.length} controls (${images} image, ${masters} reasoning masters, ${levels} levels) over 6 pi-ai models + 2 deepseek models, ${writes.length} write payloads, ${checks} assertions`);
+/* Image boxes carry the route; the deepseek family renders them with route "". */
+const piRows = boxes.filter((candidate) => candidate.props['data-kind'] === 'image' && candidate.props['data-route'] !== '').length;
+console.log(`smoke: OK — first render ${boxes.length} controls (${images} image, ${masters} reasoning masters, ${levels} levels) over ${piRows} pi-ai models + 2 deepseek models, ${writes.length} write payloads, ${checks} assertions`);

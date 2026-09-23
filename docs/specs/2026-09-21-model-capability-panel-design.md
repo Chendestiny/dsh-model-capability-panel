@@ -140,6 +140,32 @@ opencode-go / glm-5.3-flash                     GLM-5.3-Flash
 
 pi-ai 路由每个模型一行；`llm-deepseek` 家族仅图片勾选。
 
+## v0.5：排序与折叠
+
+用户确认需要：pi-ai 供应商与模型的 ↑/↓ 排序 + 供应商卡片折叠。关键查证（决定了实现路径，也纠正了我
+最初"要绕开脱敏、必须走 host 侧"的判断）：
+
+1. **整表写回安全**：`dsh-settings/lib/redact.js` 只剥 `role('secret')` 字段；pi-ai 的 `apiKeyEnv` 是
+   `credential-ref`（真 key 只在 `.credentials.yaml`）→ `describe` 的用户层 providers 完整无缺。
+2. **供应商顺序热重载**：pi-ai `installSettingsSection(..., onChange: ensureDirectory())` →
+   `directory.replace(entries)`，顺序 = 用户层 key 序 → 写完即生效，无需重启。
+3. **面板自身的路由排序 bug**：`collectGroups()` 原按字母序 sort，会与 ↑/↓ 打架 → 改为用户层 key 顺序。
+
+实现：
+
+- **模型 ↑/↓**：整数组 set（`["providers",route,"models"]`），splice 交换一位，字段随行搬运；首/末位
+  禁用；反馈 `已将 <模型> 移至第 N 位（真实数组路径）`
+- **供应商 ↑/↓**：重建用户层 dict（值引用原样拷贝、只换 key 序），一次 `set ["providers"]` + revision；
+  **写前守卫**：用户层缺失/为空 → 拒写并提示 `用户层 providers 缺失，请直接改 settings.yaml 排序`
+  （避免把解析层的值物化进用户层文件）；反馈 `已将 <route> 移至第 N 位（顺序热重载，无需重启）`
+- **折叠**：组件 state、默认展开、不写文件；卡片头排序按钮折叠后仍可用
+- `llm-deepseek` 分组 `orderable:false`，不渲染排序按钮，旁注 `顺序由 profile 加载顺序决定，此处不可调`
+  （bundle 加载序在 settings 层改不了）
+
+安全断言（smoke 84 → 118）：重排载荷中**每个 provider 的值与 describe 返回值 deepEqual**（防脱敏字段被
+污染的回归）、无 provider 丢失、revision=读取值、守卫拒写时零副作用、路由显示序 = fixture 的 key 序
+（`routeZ,routeA,routeB`，故意与字母序不同）。
+
 ## 测试
 
 `tests/smoke.mjs` 断言：

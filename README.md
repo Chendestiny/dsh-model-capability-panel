@@ -32,6 +32,21 @@ Each write reports back: a pending state on the row, then the exact path it wrot
 (`llm-pi-ai.providers.<route>.models[i].reasoningEfforts = {off, low, medium, high}`), or the host's
 rejection message verbatim.
 
+#### Ordering and folding
+
+Provider cards fold (▶/▼, expanded by default — view state only, nothing is written). Model rows and
+provider cards each carry ↑/↓ (disabled at the first/last position):
+
+- **models** move by rewriting that route's whole `models` array — every hand-written field travels with
+  its entry, and the feedback names the model and its new position
+- **providers** move by rewriting the whole user-layer `providers` map — key order *is* the dropdown order —
+  under the revision the panel read, with a deep-equal guarantee that values are untouched. A route that
+  exists only in the resolved layer (not in the file) is refused with
+  `用户层 providers 缺失，请直接改 settings.yaml 排序` rather than being materialized into the file
+- ordering **hot-reloads**: a settings change re-registers the routes live (`directory.replace`), no restart
+- **bundle-ordered providers are not reorderable here.** `deepseek-official` / `llm-vl-gateway` take their
+  position from the profile's bundle load order, not from YAML — the panel says so instead of pretending
+
 #### What is deliberately not here
 
 - **Other input modalities don't exist.** Both `llm-pi-ai` and `llm-deepseek` declare exactly
@@ -88,18 +103,18 @@ the same field through the official `api.settings.mutate` path.
 ### Install
 
 ```sh
-dsh plugin --profile web add https://github.com/Chendestiny/dsh-model-modality-panel
+dsh plugin --profile web add https://github.com/Chendestiny/dsh-model-capability-panel
 ```
 
 After installing, **restart dsh web** — the client plugin set is assembled at
 startup (only bundle contents are hot-reloaded). Then refresh the page: Settings
 gains a **Model image input** page. The client bundle is served by
-`dsh-client-modules` at `/plugins/dsh-model-modality-panel/client.js`.
+`dsh-client-modules` at `/plugins/dsh-model-capability-panel/client.js`.
 
 ### Uninstall
 
 ```sh
-dsh plugin --profile web remove dsh-model-modality-panel
+dsh plugin --profile web remove dsh-model-capability-panel
 ```
 
 Then restart dsh web.
@@ -119,7 +134,7 @@ image-budget fields on uncheck.
 
 ## 中文
 
-DSH 设置面板插件：在 **设置 → 模型读图** 里勾选/取消每个模型的「图片输入」模态，免去手改
+DSH 设置面板插件：在 **设置 → 模型能力** 里给每个模型勾选「图片输入」模态、配置推理档位，免去手改
 `settings.yaml`（官方 discussion [#5702](https://github.com/deepseek-ai/deepseek-harness/discussions/5702)
 尚未把该字段做进内置模型表单；`settings.models.model.fields` 扩展点已在 dsh 0.1.1+ 移除，
 所以本插件走独立的 `settings.section` 设置页）。
@@ -139,19 +154,31 @@ DSH 设置面板插件：在 **设置 → 模型读图** 里勾选/取消每个�
   按元素下标寻址会变成整数组替换，所以这里显式重写整条 `models` 数组，条目逐字段克隆，
   你手写的 `contextWindow` / `reasoningEfforts` 等一律原样保留
 
+### 排序与折叠
+
+供应商卡片可折叠（▶/▼，默认展开，**仅视图状态、不写文件**）。模型行与供应商卡片各有 ↑/↓（首/末位置灰）：
+
+- **模型移动** = 重写该路由整条 `models` 数组——手写字段随行整体搬运，反馈给出真实数组路径
+- **供应商移动** = 重写用户层整个 `providers` map（**键序即下拉序**），带读取时的 revision；只存在于
+  解析层、不在文件里的路由会被拒写（`用户层 providers 缺失，请直接改 settings.yaml 排序`），
+  不会被物化进文件
+- **顺序热重载，无需重启**
+- **bundle 级供应商排不了**（`deepseek-official`、`llm-vl-gateway` 的顺序由 profile 加载序决定，
+  settings 层改不了）——面板不给它渲染排序按钮，直接注明原因
+
 ### 安装
 
 ```powershell
-dsh plugin --profile web add https://github.com/Chendestiny/dsh-model-modality-panel
+dsh plugin --profile web add https://github.com/Chendestiny/dsh-model-capability-panel
 ```
 
 装完**必须重启 dsh web**（客户端插件集合变化只在启动时装配；bundle 内容变化才有 HMR），
-重启后刷新页面：设置面板会多出「模型读图」一页。
+重启后刷新页面：设置面板会多出「模型能力」一页。
 
 ### 卸载
 
 ```powershell
-dsh plugin --profile web remove dsh-model-modality-panel
+dsh plugin --profile web remove dsh-model-capability-panel
 ```
 
 再重启 dsh web 即可。
@@ -169,7 +196,7 @@ python scripts\publish_github.py --message "feat: ..."   # 提交并推送到 Gi
 python scripts\publish_local.py                          # 把本目录作为 link 安装进 dsh web profile
 ```
 
-`D:\Project\dsh-model-modality-panel` 是唯一源；本地安装通过 `link:` 指向本目录，
+`D:\Project\dsh-model-capability-panel` 是唯一源；本地安装通过 `link:` 指向本目录，
 所以改完代码跑一次 `publish_local.py`（必要时重启 dsh web）即生效。
 
 ## License
